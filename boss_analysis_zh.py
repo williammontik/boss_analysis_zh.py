@@ -24,12 +24,10 @@ def compute_age(data):
     d, m, y = data.get("dob_day"), data.get("dob_month"), data.get("dob_year")
     try:
         if d and m and y:
-            # This handles both month names (e.g., "一月") and numbers (e.g., "1")
             month_str = str(m)
             if month_str.isdigit():
                 month = int(month_str)
             else:
-                # Basic mapping for Chinese month names if they are sent
                 month_map = {"一月": 1, "二月": 2, "三月": 3, "四月": 4, "五月": 5, "六月": 6, "七月": 7, "八月": 8, "九月": 9, "十月": 10, "十一月": 11, "十二月": 12}
                 month = month_map.get(month_str, datetime.strptime(month_str, "%B").month)
             bd = datetime(int(y), month, int(d))
@@ -68,7 +66,6 @@ def boss_analyze():
     country = data.get("country", "").strip()
     age = compute_age(data)
 
-    # Raw data for email content (not displayed on the site)
     raw_info = f"""
     <h3>📥 提交的表单数据：</h3>
     <ul style="line-height:1.8;">
@@ -89,7 +86,6 @@ def boss_analyze():
     <hr><br>
     """
 
-    # === BEHAVIOR CHANGE: Generate random metrics like the English version ===
     metrics = []
     for title, color in [
         ("沟通效率", "#5E9CA0"),
@@ -99,11 +95,9 @@ def boss_analyze():
         seg, reg, glo = sorted([random.randint(60, 90), random.randint(55, 85), random.randint(60, 88)], reverse=True)
         metrics.append((title, seg, reg, glo, color))
 
-    # === BEHAVIOR CHANGE: Generate bar chart HTML on the backend ===
     bar_html = ""
     for title, seg, reg, glo, color in metrics:
         bar_html += f"<strong>{title}</strong><br>"
-        # Use Chinese labels for the bars
         labels = ["个人表现", "区域基准", "全球基准"]
         values = [seg, reg, glo]
         for i, v in enumerate(values):
@@ -114,24 +108,23 @@ def boss_analyze():
             )
         bar_html += "<br>"
 
-    # Summary text in Chinese
+    # === EDITED SUMMARY: Rewritten in Chinese to avoid "您..." and sound more personal ===
     summary = (
-        "<div style='font-size:24px;font-weight:bold;margin-top:30px;'>🧠 总结：</div><br>"
+        "<div style='font-size:24px;font-weight:bold;margin-top:30px;'>🧠 个人洞察：</div><br>"
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
-        + f"在{country}，具有<strong>{experience}年</strong>经验的<strong>{sector}</strong>行业的专业人士，经常在内部期望和市场变化之间找到平衡。沟通效果的表现（如<strong>{metrics[0][1]}%</strong>的分数所示）对于管理团队和跨部门（例如<strong>{department}</strong>）合作至关重要。"
+        + f"对于一位在<strong>{country}</strong>的<strong>{sector}</strong>领域、拥有<strong>{experience}年</strong>宝贵经验的专业人士而言，其职业旅程是在平衡内部目标与市场脉搏中不断前进的宝贵经历。展现出色的沟通效率（<strong>{metrics[0][1]}%</strong>）是成功的基石，它有助于在团队内部及跨部门之间建立起合作的桥梁。"
         + "</p>"
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
-        + f"该行业的领导准备度越来越被情商和适应力所定义。类似职位的基准数据显示，区域平均水平为<strong>{metrics[1][2]}%</strong>，这揭示了大家对清晰、冷静和尊重权威的共同追求。"
+        + f"在当今职场，真正的领导力由“心”和适应性来衡量。领导力的准备度分数（区域基准为<strong>{metrics[1][2]}%</strong>）正指向一位已经走在这条正确道路上的专业人士，能够展现出他人所寻求的那份清晰和冷静。这是一种能建立信任并激励行动的宝贵品质。"
         + "</p>"
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
-        + f"可靠完成任务的能力（评分为<strong>{metrics[2][1]}%</strong>）仍然是晋升潜力的最可靠信号之一。对于<strong>{position}</strong>这样的职位，这不仅反映了速度，还反映了做好正确事情的洞察力。"
+        + f"能够可靠地完成任务（<strong>{metrics[2][1]}%</strong>）这不仅是一个数据，更是巨大潜力的有力证明。对于<strong>{position}</strong>这个角色，这反映出一种智慧：不仅是努力工作，更是专注于真正重要的事情。这样的特质绝不会被忽视。"
         + "</p>"
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
-        + f"您选择的关注领域——<strong>{focus}</strong>——与我们在新加坡、马来西亚和台湾的管理人员中观察到的更广泛的转变相呼应。在这一领域的投入可能会为您的团队带来新的韧性、影响力和可持续增长的路径。"
+        + f"选择专注于<strong>{focus}</strong>，意味着正把握着我们在这个区域所看到的关键增长点。培养这项技能是对自身韧性和影响力的重要投资。坚持这个方向，正是在迈向一个充满希望的未来。"
         + "</p>"
     )
 
-    # AI prompt in Chinese
     prompt = (
         f"为一位来自{country}、在{sector}行业有{experience}年经验、担任{position}职位的人，提供10条具有区域意识和高情商的改进建议。"
         f"他们面临的挑战是“{challenge}”，并希望专注于“{focus}”。"
@@ -148,7 +141,6 @@ def boss_analyze():
         if line.strip():
             tips_html += f"<p style='margin:16px 0; font-size:17px;'>{line.strip()}</p>"
 
-    # Footer in Chinese
     footer = (
         '<div style="background-color:#e6f7ff; color:#00529B; padding:15px; border-left:4px solid #00529B; margin:20px 0;">'
         '<strong>本报告中的见解是通过KataChat的AI系统分析得出的：</strong><br>'
@@ -162,19 +154,16 @@ def boss_analyze():
         '</p>'
     )
 
-    # === BEHAVIOR CHANGE: Combine all HTML into a single block for both email and display ===
     email_output = raw_info + bar_html + summary + tips_html + footer
     display_output = bar_html + summary + tips_html + footer
 
     send_email(email_output)
 
-    # === BEHAVIOR CHANGE: Return a single 'analysis' key with the full HTML block ===
     return jsonify({
         "analysis": display_output
     })
 
 
 if __name__ == "__main__":
-    # Use a different port if running both apps locally at the same time
     port = int(os.getenv("PORT", 5001)) 
     app.run(debug=True, host="0.0.0.0", port=port)
