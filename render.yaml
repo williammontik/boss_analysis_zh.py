@@ -6,7 +6,7 @@ services:
 
     buildCommand: pip install -r requirements.txt
 
-    startCommand: gunicorn boss_analysis_api:app
+    startCommand: gunicorn boss_analysis_zh:app
 
     envVars:
       - key: OPENAI_API_KEY
