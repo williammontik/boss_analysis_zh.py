@@ -108,6 +108,7 @@ def boss_analyze():
             )
         bar_html += "<br>"
 
+    # FIX: Removed stray characters causing a syntax error
     summary = (
         "<div style='font-size:24px;font-weight:bold;margin-top:30px;'>🧠 个人洞察：</div><br>"
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
@@ -119,8 +120,7 @@ def boss_analyze():
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
         + f"能够可靠地完成任务（<strong>{metrics[2][1]}%</strong>）这不仅是一个数据，更是巨大潜力的有力证明。对于<strong>{position}</strong>这个角色，这反映出一种智慧：不仅是努力工作，更是专注于真正重要的事情。这样的特质绝不会被忽视。"
         + "</p>"
--        + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
-+        + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
+        + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
         + f"选择专注于<strong>{focus}</strong>，意味着正把握着我们在这个区域所看到的关键增长点。培养这项技能是对自身韧性和影响力的重要投资。坚持这个方向，正是在迈向一个充满希望的未来。"
         + "</p>"
     )
