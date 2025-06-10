@@ -35,7 +35,7 @@ def compute_age(data):
 
 def send_email(html_body: str):
     msg = MIMEText(html_body, 'html')
-    msg["Subject"] = "Boss Report Submission"
+    msg["Subject"] = "Boss Report 提交"
     msg["From"] = SMTP_USERNAME
     msg["To"] = SMTP_USERNAME
     with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
@@ -67,11 +67,11 @@ def boss_analyze():
       <li><strong>中文名:</strong> {member_name_cn}</li>
       <li><strong>职位:</strong> {position}</li>
       <li><strong>部门:</strong> {department}</li>
-      <li><strong>从业年数:</strong> {experience} 年</li>
-      <li><strong>所属领域:</strong> {sector}</li>
+      <li><strong>经验:</strong> {experience} 年</li>
+      <li><strong>领域:</strong> {sector}</li>
       <li><strong>面临的挑战:</strong> {challenge}</li>
-      <li><strong>优先关注:</strong> {focus}</li>
-      <li><strong>电子邮箱:</strong> {email}</li>
+      <li><strong>关注点:</strong> {focus}</li>
+      <li><strong>电子邮件:</strong> {email}</li>
       <li><strong>所在国家:</strong> {country}</li>
       <li><strong>出生日期:</strong> {data.get("dob_day", "")} - {data.get("dob_month", "")} - {data.get("dob_year", "")}</li>
       <li><strong>推荐人:</strong> {data.get("referrer", "")}</li>
@@ -83,7 +83,7 @@ def boss_analyze():
     metrics = []
     for title, color in [
         ("沟通效率", "#5E9CA0"),
-        ("领导准备度", "#FF9F40"),
+        ("领导力准备度", "#FF9F40"),
         ("任务完成可靠性", "#9966FF"),
     ]:
         seg, reg, glo = sorted([random.randint(60, 90), random.randint(55, 85), random.randint(60, 88)], reverse=True)
@@ -101,21 +101,21 @@ def boss_analyze():
     summary = (
         "<div style='font-size:24px;font-weight:bold;margin-top:30px;'>🧠 总结:</div><br>"
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
-        + f"在{country}，专业人士在<strong>{sector}</strong>领域拥有<strong>{experience}年</strong>经验，通常需要平衡内部期望和市场变化。沟通效率在<small>{metrics[0][1]}%</small>等数值中得到了体现，关键在于管理团队和跨部门协作。"
+        + f"在{country}，拥有{experience}年经验的{sector}行业的专业人士通常在平衡内部期望与市场演变之间找到平衡点。沟通效果的关键性，表现为{metrics[0][1]}%，不仅对团队管理至关重要，也对跨部门协作至关重要，尤其是在{department or '核心职能'}这样的部门中。"
         + "</p>"
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
-        + "领导准备度在该领域越来越依赖情商和适应性。对比同类角色的基准数据，区域平均为 <strong>{metrics[1][2]}%</strong>，显示出在压力下保持冷静并能发挥尊重权威的共同追求。"
+        + "领导力准备度在该行业越来越受到情商和适应能力的定义。跨类似角色的基准值表明，强劲的区域平均值为{metrics[1][2]}%，显示出清晰、镇定、尊重的领导风范在压力下的共同追求。"
         + "</p>"
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
-        + f"任务完成能力的可靠性 — 在{metrics[2][1]}%的水平 — 是向上发展的最可靠信号之一。对于担任销售总监等职位的人员来说，这不仅仅是速度问题，更多的是选择执行正确的任务。"
+        + f"任务完成的可靠性 — 测量为{metrics[2][1]}% — 仍然是最可靠的上升潜力信号之一。对于{position}角色的人来说，它不仅代表速度，还代表辨识力 — 选择执行得当的正确事务。"
         + "</p>"
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
-        + f"您的关注重点 — <strong>{focus}</strong> — 显示了我们在新加坡、马来西亚和台湾的管理档案中看到的更广泛变化。在这一领域的投资可能会为韧性、影响力和可持续增长开辟新的路径。"
+        + f"您选择的重点 — <strong>{focus}</strong> — 呼应了我们在新加坡、马来西亚和台湾的管理档案中看到的更广泛变化。投资这一领域可能会打开新的韧性、影响力和可持续增长的途径。"
         + "</p>"
     )
 
     prompt = (
-        f"为来自{country}的{position}职位、在{sector}领域工作{experience}年的专业人士，面对'{challenge}'并专注于'{focus}'，给出10个具有情感智能的改进建议。每个建议应单独列出，语气温暖，带有表情符号。避免冷酷的语气。"
+        f"给一个来自{country}、在{sector}领域、具有{experience}年经验的{position}，面对'{challenge}'并专注于'{focus}'，给出10个情商高、地域相关的改进建议，每条建议占一行，要求语气温暖、带有表情符号。避免冷淡的语气。"
     )
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -130,13 +130,13 @@ def boss_analyze():
 
     footer = (
         '<div style="background-color:#e6f7ff; color:#00529B; padding:15px; border-left:4px solid #00529B; margin:20px 0;">'
-        '<strong>本报告中的洞察由KataChat的AI系统分析生成：</strong><br>'
-        '1. 我们在新加坡、马来西亚和台湾的匿名专业档案数据库<br>'
-        '2. 来自OpenAI研究和领导力趋势数据集的全球业务基准<br>'
-        '<em>所有数据都通过我们的AI模型处理，以识别统计学显著模式，同时确保符合PDPA合规要求。</em>'
-        '</div>'
+        '<strong>本报告的见解由KataChat的AI系统生成：</strong><br>'
+        '1. 我们专有的来自新加坡、马来西亚和台湾的匿名职业档案数据库<br>'
+        '2. 来自可信的OpenAI研究和领导力趋势数据集的全球商业基准<br>'
+        '<em>所有数据都通过我们的AI模型进行处理，以识别具有统计显著性的模式，同时保持严格的PDPA合规性。</em>'
+        '</div>' +
         "<p style=\"background-color:#e6f7ff; color:#00529B; padding:15px; border-left:4px solid #00529B; margin:20px 0;\">"
-        "<strong>PS:</strong> 您的个性化报告将在24–48小时内发送到您的收件箱。如果您希望进一步讨论，请随时联系我们，我们很乐意为您安排15分钟的电话沟通。"
+        "<strong>PS:</strong> 您的个性化报告将在24到48小时内送达您的收件箱。如果您希望进一步讨论，欢迎随时联系我们 — 我们很乐意安排一个15分钟的电话会议，与您方便的时候讨论。"
         "</p>"
     )
 
@@ -147,7 +147,7 @@ def boss_analyze():
 
     return jsonify({
         "metrics": [
-            {"title": t, "labels": ["Segment", "Regional", "Global"], "values": [s, r, g]}
+            {"title": t, "labels": ["部门", "区域", "全球"], "values": [s, r, g]}
             for t, s, r, g, _ in metrics
         ],
         "analysis": display_output
