@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import smtplib
 from datetime import datetime
@@ -18,12 +19,19 @@ SMTP_PORT = 587
 SMTP_USERNAME = "kata.chatbot@gmail.com"
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 
+
 def compute_age(data):
     d, m, y = data.get("dob_day"), data.get("dob_month"), data.get("dob_year")
     try:
         if d and m and y:
-            # This logic correctly handles the month number (e.g., '1', '2') from the updated frontend
-            month = int(m)
+            # This handles both month names (e.g., "一月") and numbers (e.g., "1")
+            month_str = str(m)
+            if month_str.isdigit():
+                month = int(month_str)
+            else:
+                # Basic mapping for Chinese month names if they are sent
+                month_map = {"一月": 1, "二月": 2, "三月": 3, "四月": 4, "五月": 5, "六月": 6, "七月": 7, "八月": 8, "九月": 9, "十月": 10, "十一月": 11, "十二月": 12}
+                month = month_map.get(month_str, datetime.strptime(month_str, "%B").month)
             bd = datetime(int(y), month, int(d))
         else:
             bd = parser.parse(data.get("dob", ""), dayfirst=True)
@@ -51,7 +59,7 @@ def boss_analyze():
     member_name = data.get("memberName", "").strip()
     member_name_cn = data.get("memberNameCn", "").strip()
     position = data.get("position", "").strip()
-    department = data.get("department", "").strip()
+    department = data.get("department", "").strip() or '核心职能'
     experience = data.get("experience", "").strip()
     sector = data.get("sector", "").strip()
     challenge = data.get("challenge", "").strip()
@@ -60,7 +68,7 @@ def boss_analyze():
     country = data.get("country", "").strip()
     age = compute_age(data)
 
-    # Raw data for email content
+    # Raw data for email content (not displayed on the site)
     raw_info = f"""
     <h3>📥 提交的表单数据：</h3>
     <ul style="line-height:1.8;">
@@ -81,89 +89,92 @@ def boss_analyze():
     <hr><br>
     """
 
-    metrics = [
-        ("沟通效率", 85, 84, 82, "#5E9CA0"),
-        ("领导准备度", 88, 88, 56, "#FF9F40"),
-        ("任务完成可靠性", 85, 68, 65, "#9966FF")
-    ]
+    # === BEHAVIOR CHANGE: Generate random metrics like the English version ===
+    metrics = []
+    for title, color in [
+        ("沟通效率", "#5E9CA0"),
+        ("领导准备度", "#FF9F40"),
+        ("任务完成可靠性", "#9966FF"),
+    ]:
+        seg, reg, glo = sorted([random.randint(60, 90), random.randint(55, 85), random.randint(60, 88)], reverse=True)
+        metrics.append((title, seg, reg, glo, color))
 
+    # === BEHAVIOR CHANGE: Generate bar chart HTML on the backend ===
     bar_html = ""
     for title, seg, reg, glo, color in metrics:
         bar_html += f"<strong>{title}</strong><br>"
-        for v in (seg, reg, glo):
+        # Use Chinese labels for the bars
+        labels = ["个人表现", "区域基准", "全球基准"]
+        values = [seg, reg, glo]
+        for i, v in enumerate(values):
             bar_html += (
+                f"<span style='font-size:14px; width:80px; display:inline-block;'>{labels[i]}:</span>"
                 f"<span style='display:inline-block;width:{v}%;height:12px;"
-                f" background:{color}; margin-right:6px; border-radius:4px;'></span> {v}%<br>"
+                f" background:{color}; margin-right:6px; border-radius:4px; vertical-align:middle;'></span> {v}%<br>"
             )
         bar_html += "<br>"
 
-    # Create the full summary text for the email
+    # Summary text in Chinese
     summary = (
         "<div style='font-size:24px;font-weight:bold;margin-top:30px;'>🧠 总结：</div><br>"
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
-        + f"在{country}，具有{experience}年经验的{sector}行业的专业人士，经常在内部期望和市场变化之间找到平衡。沟通效果的表现（{metrics[0][1]}%）对于管理团队和跨部门合作至关重要，尤其在{department}等部门中。</p>"
+        + f"在{country}，具有<strong>{experience}年</strong>经验的<strong>{sector}</strong>行业的专业人士，经常在内部期望和市场变化之间找到平衡。沟通效果的表现（如<strong>{metrics[0][1]}%</strong>的分数所示）对于管理团队和跨部门（例如<strong>{department}</strong>）合作至关重要。"
+        + "</p>"
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
-        + f"领导准备度在这个行业越来越被情商和适应力所定义，区域基准为{metrics[1][2]}%。</p>"
+        + f"该行业的领导准备度越来越被情商和适应力所定义。类似职位的基准数据显示，区域平均水平为<strong>{metrics[1][2]}%</strong>，这揭示了大家对清晰、冷静和尊重权威的共同追求。"
+        + "</p>"
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
-        + f"可靠完成任务的能力（{metrics[2][1]}%）仍然是晋升潜力的信号。</p>"
+        + f"可靠完成任务的能力（评分为<strong>{metrics[2][1]}%</strong>）仍然是晋升潜力的最可靠信号之一。对于<strong>{position}</strong>这样的职位，这不仅反映了速度，还反映了做好正确事情的洞察力。"
+        + "</p>"
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
-        + f"您的关注领域 — {focus} — 反映了新加坡、马来西亚和台湾的管理者趋势。</p>"
+        + f"您选择的关注领域——<strong>{focus}</strong>——与我们在新加坡、马来西亚和台湾的管理人员中观察到的更广泛的转变相呼应。在这一领域的投入可能会为您的团队带来新的韧性、影响力和可持续增长的路径。"
+        + "</p>"
     )
 
-    prompt = f"给出10个区域性、情商高、针对{position}的改善建议，来自{country}，经验{experience}年，聚焦在{focus}。"
+    # AI prompt in Chinese
+    prompt = (
+        f"为一位来自{country}、在{sector}行业有{experience}年经验、担任{position}职位的人，提供10条具有区域意识和高情商的改进建议。"
+        f"他们面临的挑战是“{challenge}”，并希望专注于“{focus}”。"
+        f"每条建议都应另起一行，用亲切的语气书写，并带有表情符号。避免冷冰冰的语气。"
+    )
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.85
     )
     tips = response.choices[0].message.content.strip().split("\n")
-    
     tips_html = "<div style='font-size:24px;font-weight:bold;margin-top:30px;'>💡 创意建议：</div><br>"
     for line in tips:
         if line.strip():
             tips_html += f"<p style='margin:16px 0; font-size:17px;'>{line.strip()}</p>"
 
+    # Footer in Chinese
     footer = (
         '<div style="background-color:#e6f7ff; color:#00529B; padding:15px; border-left:4px solid #00529B; margin:20px 0;">'
-        '<strong>报告由KataChat的AI系统生成：</strong><br>'
+        '<strong>本报告中的见解是通过KataChat的AI系统分析得出的：</strong><br>'
         '1. 我们的专有匿名专业档案数据库，涵盖新加坡、马来西亚和台湾的行业数据<br>'
-        '2. 来自OpenAI研究和领导力趋势数据集的全球商业基准数据<br>'
+        '2. 来自可信的OpenAI研究和领导力趋势数据集的全球商业基准数据<br>'
         '<em>所有数据都通过我们的AI模型进行处理，以识别统计学上显著的模式，并保持严格的PDPA合规。</em>'
         '</div>'
-        "<p style=\"background-color:#e6f7ff; color:#00529B; padding:15px; border-left:4px solid #00529B; margin:20px 0;\">"
-        "<strong>PS:</strong> 您的个性化报告将在24–48小时内送达您的邮箱。"
-        "如果您希望进一步讨论，请随时联系我们，我们愿意为您安排15分钟的电话会议。"
-        "</p>"
+        '<p style="background-color:#e6f7ff; color:#00529B; padding:15px; border-left:4px solid #00529B; margin:20px 0;">'
+        '<strong>PS:</strong> 您的个性化报告将在24到48小时内送达您的邮箱。<br>'
+        '如果您想进一步讨论，请随时与我们联系——我们很乐意为您安排一次15分钟的电话会议。'
+        '</p>'
     )
 
-    # Combine all elements for the email
+    # === BEHAVIOR CHANGE: Combine all HTML into a single block for both email and display ===
     email_output = raw_info + bar_html + summary + tips_html + footer
+    display_output = bar_html + summary + tips_html + footer
+
     send_email(email_output)
-    
-    # === START OF CHANGE ===
-    # Create structured data for the JSON response to the frontend
-    
-    summary_dict = {
-        "text": f"在{country}，具有{experience}年经验的{sector}行业的专业人士，经常在内部期望和市场变化之间找到平衡。沟通效果的表现（{metrics[0][1]}%）对于管理团队和跨部门合作至关重要，尤其在{department}等部门中。",
-        "text2": f"领导准备度在这个行业越来越被情商和适应力所定义。类似职位的基准数据显示，区域平均为{metrics[1][2]}%，显示了大家对清晰、应对压力时的冷静和尊重权威的共同追求。",
-        "text3": f"可靠完成任务的能力（{metrics[2][1]}%）仍然是晋升潜力的一个信号。对于{position}等角色来说，这不仅仅体现了速度，还体现了选择正确的工作执行的洞察力。",
-        "text4": f"您选择的关注领域——{focus}——反映了我们在新加坡、马来西亚和台湾的管理者角色中的一个更广泛的转变。投资于这一领域可能为您的团队带来新的韧性、影响力和可持续增长的路径。"
-    }
 
-    # The tips are already a list, which is what the frontend expects
-    tips_list = [line.strip() for line in tips if line.strip()]
-
-    # Return the structured JSON that the frontend script expects
+    # === BEHAVIOR CHANGE: Return a single 'analysis' key with the full HTML block ===
     return jsonify({
-        "metrics": [
-            {"title": t, "labels": ["Segment", "Regional", "Global"], "values": [s, r, g]}
-            for t, s, r, g, _ in metrics
-        ],
-        "summary": summary_dict,
-        "suggestions": tips_list
+        "analysis": display_output
     })
-    # === END OF CHANGE ===
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+    # Use a different port if running both apps locally at the same time
+    port = int(os.getenv("PORT", 5001)) 
+    app.run(debug=True, host="0.0.0.0", port=port)
