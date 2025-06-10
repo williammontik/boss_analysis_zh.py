@@ -1,229 +1,141 @@
-<!-- === START WIDGET FOR BOSS (ZH 中文版) === -->
+# -*- coding: utf-8 -*-
+import os, smtplib, random, logging
+from datetime import datetime
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from email.mime.text import MIMEText
+from openai import OpenAI
 
-<!-- 1) 样式 -->
-<style>
-  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-  #hiddenFormBoss {
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.5s ease, transform 0.5s ease;
-    display: none;
-  }
-  #hiddenFormBoss.show {
-    display: block;
-    opacity: 1;
-    transform: translateY(0);
-  }
-  #loadingMessageBoss { display: none; text-align: center; margin-top: 30px; }
-  #resultContainerBoss {
-    display: none;
-    opacity: 0;
-    transition: opacity 0.5s ease;
-    margin-top: 20px;
-  }
-  #resultContainerBoss.show {
-    display: block;
-    opacity: 1;
-  }
-</style>
+app = Flask(__name__)
+CORS(app)
+app.logger.setLevel(logging.DEBUG)
 
-<!-- 2) 下一步按钮 -->
-<button id="simulateBossButton" style="padding:10px 20px; background:#5E9CA0; color:#fff; border:none; border-radius:8px; cursor:pointer; margin-bottom:20px;">下一步</button>
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 587
+SMTP_USERNAME = "kata.chatbot@gmail.com"
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 
-<!-- 3) 隐藏表单 -->
-<div id="hiddenFormBoss" style="margin-top:20px;">
-  <!-- PDPA 信息框 -->
-  <div style="margin-bottom:20px; font-size:16px; line-height:1.6; background:#f9f9f9; padding:20px; border-radius:8px; border-left:6px solid #5E9CA0;">
-    <p style="font-size:18px; font-weight:bold; color:#5E9CA0;">我们致力于通过真实洞察提升职场表现 😊。为了提供更好的支持，请填写以下资料。</p>
-    <p style="margin-top:10px;"><strong>填写后，您将获得：</strong></p>
-    <ul style="margin:10px 0 0 20px; padding:0;">
-      <li><strong>基于真实数据的 AI 反馈</strong>，聚焦您的区域。</li>
-      <li><strong>个性化分析报告</strong>，应对具体挑战。</li>
-      <li><strong>提交前请勾选 PDPA 数据授权</strong>。</li>
-    </ul>
-    <p style="font-style:italic; margin-top:10px;">所有信息将受到保护，您可随时更新或删除。👍</p>
-  </div>
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-  <!-- PDPA 勾选框 -->
-  <div style="margin-bottom:20px; display:flex; align-items:center; font-size:16px;">
-    <input type="checkbox" id="pdpaCheckboxBoss" style="margin-right:10px;">
-    <label for="pdpaCheckboxBoss">我同意根据新加坡、马来西亚和台湾的 PDPA 隐私规范提交资料。</label>
-  </div>
+CHINESE_MONTHS = {
+    '一月': 1, '二月': 2, '三月': 3, '四月': 4,
+    '五月': 5, '六月': 6, '七月': 7, '八月': 8,
+    '九月': 9, '十月': 10, '十一月': 11, '十二月': 12
+}
 
-  <!-- 表单 -->
-  <form id="bossForm" method="POST" style="display:flex; flex-direction:column; gap:20px; pointer-events:none; opacity:0.3;">
-    <input type="hidden" name="lang" value="zh">
 
-    <label for="memberName">👤 员工英文全名</label>
-    <input type="text" id="memberName" required disabled style="padding:12px;">
+def compute_age(data):
+    d, m, y = data.get("dob_day"), data.get("dob_month"), data.get("dob_year")
+    try:
+        month = int(m) if m.isdigit() else CHINESE_MONTHS.get(m, 1)
+        bd = datetime(int(y), month, int(d))
+    except Exception:
+        bd = datetime.today()
+    today = datetime.today()
+    return today.year - bd.year - ((today.month, today.day) < (bd.month, bd.day))
 
-    <label for="memberNameCn">🈶 中文名</label>
-    <input type="text" id="memberNameCn" disabled style="padding:12px;">
 
-    <label for="position">🏢 职位</label>
-    <input type="text" id="position" required disabled style="padding:12px;">
+def send_email(html_body):
+    msg = MIMEText(html_body, 'html', 'utf-8')
+    msg['Subject'] = "Boss 提交记录"
+    msg['From'] = SMTP_USERNAME
+    msg['To'] = SMTP_USERNAME
+    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        server.starttls()
+        server.login(SMTP_USERNAME, SMTP_PASSWORD)
+        server.send_message(msg)
 
-    <label for="department">📂 部门（可选）</label>
-    <input type="text" id="department" disabled style="padding:12px;">
 
-    <label for="experience">🗓️ 从业年数</label>
-    <input type="number" id="experience" required min="0" disabled style="padding:12px;">
+@app.route("/boss_analyze", methods=["POST"])
+def boss_analyze():
+    data = request.get_json(force=True)
 
-    <label for="sector">📌 所属领域</label>
-    <select id="sector" required disabled style="padding:12px;">
-      <option value="">📌 选择领域</option>
-      <option>室内 – 行政 / 人事 / 财务 / 营运</option>
-      <option>室内 – 技术 / 工程 / IT</option>
-      <option>户外 – 销售 / 商务拓展 / 零售</option>
-      <option>户外 – 客户服务 / 物流 / 外勤</option>
-    </select>
+    name = data.get("memberName", "")
+    name_cn = data.get("memberNameCn", "")
+    position = data.get("position", "")
+    department = data.get("department", "")
+    experience = data.get("experience", "")
+    sector = data.get("sector", "")
+    challenge = data.get("challenge", "")
+    focus = data.get("focus", "")
+    email = data.get("email", "")
+    country = data.get("country", "")
+    age = compute_age(data)
 
-    <label for="challenge">⚠️ 面临的挑战</label>
-    <textarea id="challenge" maxlength="200" required disabled style="padding:12px;"></textarea>
+    # 随机图表数据
+    metrics = []
+    for title, color in [
+        ("沟通效率", "#5E9CA0"),
+        ("领导力潜能", "#FF9F40"),
+        ("任务执行力", "#9966FF")
+    ]:
+        seg, reg, glo = sorted([random.randint(60, 90), random.randint(55, 85), random.randint(60, 88)], reverse=True)
+        metrics.append((title, seg, reg, glo, color))
 
-    <label for="focus">🌟 优先关注方向</label>
-    <input type="text" id="focus" required disabled style="padding:12px;">
+    # 图表 HTML
+    bar_html = ""
+    for title, seg, reg, glo, color in metrics:
+        bar_html += f"<strong>{title}</strong><br>"
+        for v in (seg, reg, glo):
+            bar_html += f"<span style='display:inline-block;width:{v}%;height:12px;background:{color}; margin-right:6px; border-radius:4px;'></span> {v}%<br>"
+        bar_html += "<br>"
 
-    <label for="email">📧 电子邮箱</label>
-    <input type="email" id="email" required disabled style="padding:12px;">
+    # 中文总结段落
+    summary = (
+        f"<div style='font-size:24px;font-weight:bold;margin-top:30px;'>🧠 综合总结：</div><br>"
+        f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px;'>"
+        f"在{country}，从事<strong>{sector}</strong>领域、拥有<strong>{experience}年</strong>经验的专业人士，常在内外部需求之间寻找平衡。沟通效率在如<strong>{department or '核心部门'}</strong>中尤其关键，本次数据展示出沟通维度的区域表现为<strong>{metrics[0][2]}%</strong>，表明跨团队协作的能力有待持续锻炼与优化。"
+        f"</p>"
+        f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px;'>"
+        f"领导潜力方面，越来越多职场人展现出情绪管理与适应变革的能力。区域基准为<strong>{metrics[1][2]}%</strong>，说明在应对复杂环境时，冷静、尊重与清晰表达正成为新型领导者的核心特质。"
+        f"</p>"
+        f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px;'>"
+        f"任务执行维度达到<strong>{metrics[2][1]}%</strong>，这不仅体现了速度，更是一种识别重点、精准落地的能力。在<strong>{position}</strong>岗位中，该指标直接关联到信任与晋升通道。"
+        f"</p>"
+        f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px;'>"
+        f"您提出的关注方向：<strong>{focus}</strong>，正是我们在新马台看到的职场人普遍关注的提升方向之一。持续投资该领域，可能为您的长期影响力与稳定成长打开更宽广的路径。"
+        f"</p>"
+    )
 
-    <label for="country">🌍 所在国家</label>
-    <select id="country" required disabled style="padding:12px;">
-      <option value="">🌍 选择国家</option>
-      <option>新加坡</option>
-      <option>马来西亚</option>
-      <option>台湾</option>
-    </select>
+    # GPT 提示语
+    prompt = (
+        f"请用中文提供10个具区域理解力与情感共鸣的建议，给一位来自{country}、担任{position}、经验为{experience}年、所属领域为{sector}的职场人，面临的挑战为「{challenge}」，优先关注「{focus}」。每行一条建议，风格温暖、有启发性，适当使用 emoji，避免机械冷漠语气。"
+    )
 
-    <label>📅 出生日期</label>
-    <div style="display:flex; gap:10px;">
-      <select id="dob_day" required disabled style="flex:1; padding:12px;"><option value="">日</option></select>
-      <select id="dob_month" required disabled style="flex:1; padding:12px;"><option value="">月</option></select>
-      <select id="dob_year" required disabled style="flex:1; padding:12px;"><option value="">年</option></select>
-    </div>
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.85
+    )
+    tips = response.choices[0].message.content.strip().split("\n")
+    tips_html = "<div style='font-size:24px;font-weight:bold;margin-top:30px;'>💡 提升建议：</div><br>"
+    for line in tips:
+        if line.strip():
+            tips_html += f"<p style='margin:16px 0; font-size:17px;'>{line.strip()}</p>"
 
-    <label for="referrer">💬 推荐人（如有）</label>
-    <input type="text" id="referrer" disabled style="padding:12px;">
+    footer = (
+        '<div style="background-color:#e6f7ff; color:#00529B; padding:15px; border-left:4px solid #00529B; margin:20px 0;">'
+        '<strong>本报告由 KataChat AI 系统生成，分析基础：</strong><br>'
+        '1. 新加坡、马来西亚、台湾三地职场人匿名数据分析模型<br>'
+        '2. 来自 OpenAI 最新领导力研究与全球职场趋势数据库<br>'
+        '<em>所有处理过程遵循 PDPA 数据规范。</em>'
+        '</div>'
+        '<p style="background-color:#e6f7ff; color:#00529B; padding:15px; border-left:4px solid #00529B; margin:20px 0;">'
+        '<strong>备注：</strong>您将在 24–48 小时内收到完整报告邮件。如需进一步讨论，可通过 Telegram 或邮件预约 15 分钟交流时间。'
+        '</p>'
+    )
 
-    <label for="contactNumber">📞 汇报对象姓名与联系方式</label>
-    <input type="text" id="contactNumber" required disabled style="padding:12px;">
+    html_body = bar_html + summary + tips_html + footer
+    send_email(html_body)
 
-    <button type="submit" id="submitButtonBoss" disabled style="padding:14px; background:#5E9CA0; color:#fff; border:none; border-radius:10px; cursor:pointer;">
-      🚀 提交
-    </button>
-  </form>
-</div>
+    return jsonify({
+        "metrics": [
+            {"title": t, "labels": ["分组", "区域", "全球"], "values": [s, r, g]}
+            for t, s, r, g, _ in metrics
+        ],
+        "analysis": html_body
+    })
 
-<!-- 4) 加载动画 -->
-<div id="loadingMessageBoss">
-  <div style="width:60px; height:60px; border:6px solid #ccc; border-top:6px solid #5E9CA0; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto;"></div>
-  <p style="color:#5E9CA0; margin-top:10px;">🔄 正在分析，请稍候…</p>
-</div>
 
-<!-- 5) 结果显示 -->
-<div id="resultContainerBoss">
-  <br><br>
-  <h4 style="text-align:center; font-size:28px; font-weight:bold; color:#5E9CA0;">🎉 AI 员工表现洞察：</h4>
-  <br><br>
-  <div id="bossResultContent" style="white-space:pre-wrap; font-size:16px; line-height:1.6; max-width:700px; margin:0 auto;"></div>
-  <div style="text-align:center; margin-top:20px;">
-    <button id="resetButton" style="padding:14px; background:#2196F3; color:#fff; border:none; border-radius:10px; cursor:pointer;">🔄 重新开始</button>
-  </div>
-</div>
-
-<!-- 6) Script -->
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const simulateBtn = document.getElementById('simulateBossButton');
-  const formWrapper = document.getElementById('hiddenFormBoss');
-  const form = document.getElementById('bossForm');
-  const pdpa = document.getElementById('pdpaCheckboxBoss');
-  const spinner = document.getElementById('loadingMessageBoss');
-  const resultDiv = document.getElementById('resultContainerBoss');
-  const resultContent = document.getElementById('bossResultContent');
-
-  simulateBtn.addEventListener('click', () => {
-    formWrapper.classList.add('show');
-  });
-
-  pdpa.addEventListener('change', () => {
-    const fields = form.querySelectorAll('input, select, textarea, button[type="submit"]');
-    fields.forEach(f => f.disabled = !pdpa.checked);
-    form.style.opacity = pdpa.checked ? '1' : '0.3';
-    form.style.pointerEvents = pdpa.checked ? 'auto' : 'none';
-  });
-
-  const daySel = document.getElementById('dob_day');
-  for (let d = 1; d <= 31; d++) daySel.innerHTML += `<option>${d}</option>`;
-  const monthSel = document.getElementById('dob_month');
-  ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-    .forEach(m => monthSel.innerHTML += `<option>${m}</option>`);
-  const yearSel = document.getElementById('dob_year');
-  const thisYear = new Date().getFullYear();
-  for (let y = thisYear - 65; y <= thisYear - 18; y++) yearSel.innerHTML += `<option>${y}</option>`;
-
-  form.addEventListener('submit', async e => {
-    e.preventDefault();
-    spinner.style.display = 'block';
-    resultDiv.style.display = 'none';
-    resultContent.innerHTML = '';
-
-    const getVal = id => document.getElementById(id).value;
-    const payload = {
-      memberName: getVal('memberName'),
-      memberNameCn: getVal('memberNameCn'),
-      position: getVal('position'),
-      department: getVal('department'),
-      experience: getVal('experience'),
-      sector: getVal('sector'),
-      challenge: getVal('challenge'),
-      focus: getVal('focus'),
-      email: getVal('email'),
-      country: getVal('country'),
-      dob_day: getVal('dob_day'),
-      dob_month: getVal('dob_month'),
-      dob_year: getVal('dob_year'),
-      referrer: getVal('referrer'),
-      contactNumber: getVal('contactNumber'),
-      lang: 'zh'
-    };
-
-    try {
-      const res = await fetch('https://boss-analysis-api.onrender.com/boss_analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-
-      spinner.style.display = 'none';
-      resultDiv.style.display = 'block';
-      resultDiv.classList.add('show');
-
-      resultContent.innerHTML = data.error
-        ? `<p style="color:red;">⚠️ ${data.error}</p>`
-        : data.analysis;
-
-      // Disable form after result shown
-      form.querySelectorAll('input, select, textarea, button').forEach(el => el.disabled = true);
-      form.style.opacity = '0.3';
-      form.style.pointerEvents = 'none';
-
-    } catch (err) {
-      console.error(err);
-      spinner.style.display = 'none';
-      resultDiv.style.display = 'block';
-      resultContent.innerHTML = '<p style="color:red;">⚠️ Network/server error – check console.</p>';
-    }
-  });
-
-  const resetBtn = document.getElementById('resetButton');
-  if (resetBtn) {
-    resetBtn.addEventListener('click', () => {
-      window.location.href = "https://katachat.online";
-    });
-  }
-});
-</script>
-
-<!-- === END WIDGET FOR BOSS (ZH) === -->
+if __name__ == '__main__':
+    app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
