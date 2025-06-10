@@ -108,7 +108,6 @@ def boss_analyze():
             )
         bar_html += "<br>"
 
-    # === EDITED SUMMARY: Rewritten in Chinese to avoid "您..." and sound more personal ===
     summary = (
         "<div style='font-size:24px;font-weight:bold;margin-top:30px;'>🧠 个人洞察：</div><br>"
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
@@ -120,20 +119,22 @@ def boss_analyze():
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
         + f"能够可靠地完成任务（<strong>{metrics[2][1]}%</strong>）这不仅是一个数据，更是巨大潜力的有力证明。对于<strong>{position}</strong>这个角色，这反映出一种智慧：不仅是努力工作，更是专注于真正重要的事情。这样的特质绝不会被忽视。"
         + "</p>"
-        + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
+-        + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
++        + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
         + f"选择专注于<strong>{focus}</strong>，意味着正把握着我们在这个区域所看到的关键增长点。培养这项技能是对自身韧性和影响力的重要投资。坚持这个方向，正是在迈向一个充满希望的未来。"
         + "</p>"
     )
 
+    # === UPDATED PROMPT: Asks for a more professional tone in Chinese ===
     prompt = (
-        f"为一位来自{country}、在{sector}行业有{experience}年经验、担任{position}职位的人，提供10条具有区域意识和高情商的改进建议。"
+        f"为一位来自{country}、在{sector}行业有{experience}年经验、担任{position}职位的人，提供10条可行的、专业的、且鼓舞人心的改进建议。"
         f"他们面临的挑战是“{challenge}”，并希望专注于“{focus}”。"
-        f"每条建议都应另起一行，用亲切的语气书写，并带有表情符号。避免冷冰冰的语气。"
+        f"每条建议都应是一条清晰、有建设性的忠告。语气应当是赋能和尊重的，避免过于随意。请恰当地使用表情符号来增加亲和力，而非显得不专业。"
     )
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.85
+        temperature=0.75 # Slightly lowered for more focused output
     )
     tips = response.choices[0].message.content.strip().split("\n")
     tips_html = "<div style='font-size:24px;font-weight:bold;margin-top:30px;'>💡 创意建议：</div><br>"
