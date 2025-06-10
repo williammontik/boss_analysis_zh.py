@@ -1,21 +1,38 @@
 # -*- coding: utf-8 -*-
 import os
 import smtplib
+import logging  # Import the logging module
+import random
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import random
 
 app = Flask(__name__)
 CORS(app)
-app.logger.setLevel(logging.DEBUG)
+app.logger.setLevel(logging.DEBUG)  # Set logging level to DEBUG
 
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SMTP_USERNAME = "kata.chatbot@gmail.com"
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+
+CHINESE_MONTHS = {
+    '一月': 1, '二月': 2, '三月': 3, '四月': 4,
+    '五月': 5, '六月': 6, '七月': 7, '八月': 8,
+    '九月': 9, '十月': 10, '十一月': 11, '十二月': 12
+}
+ENGLISH_MONTHS = {
+    'January': 1, 'February': 2, 'March': 3, 'April': 4,
+    'May': 5, 'June': 6, 'July': 7, 'August': 8,
+    'September': 9, 'October': 10, 'November': 11, 'December': 12
+}
+
+CHINESE_GENDER = {
+    '男': '男孩',
+    '女': '女孩'
+}
 
 def send_email(html_body):
     try:
@@ -23,7 +40,11 @@ def send_email(html_body):
         msg['Subject'] = "新的员工表现分析提交"
         msg['From'] = SMTP_USERNAME
         msg['To'] = SMTP_USERNAME
-        msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+        
+        # Ensure proper encoding for Chinese characters
+        part = MIMEText(html_body, 'html', 'utf-8')
+        msg.attach(part)
+        
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
             server.login(SMTP_USERNAME, SMTP_PASSWORD)
@@ -36,8 +57,8 @@ def send_email(html_body):
 def boss_analyze():
     try:
         data = request.get_json()
-        
-        # Extract all fields for boss analysis
+
+        # Extract all the fields from your boss form
         member_name = data.get("memberName", "")
         member_name_cn = data.get("memberNameCn", "")
         position = data.get("position", "")
@@ -53,8 +74,8 @@ def boss_analyze():
         dob_year = data.get("dob_year", "")
         referrer = data.get("referrer", "")
         contact_number = data.get("contactNumber", "")
-        
-        # Generate metrics for boss/employee analysis (using random values for simplicity)
+
+        # Generate metrics for boss/employee analysis
         metrics = [
             {
                 "title": "沟通效率",
@@ -72,27 +93,27 @@ def boss_analyze():
                 "values": [random.randint(75, 95), random.randint(70, 90), random.randint(65, 85)]
             }
         ]
-        
-        # Generate Chinese analysis text for the report
+
+        # Generate Chinese analysis text
         para1 = (
             f"在{country}，{sector}领域拥有{experience}年经验的{position}面临着独特的职场挑战。"
             f"数据显示，团队沟通效率达到{metrics[0]['values'][0]}%，而跨部门协作效率为{metrics[0]['values'][1]}%，"
             f"这表明在内部协调方面仍有提升空间。客户互动评分为{metrics[0]['values'][2]}%，"
             f"反映出在外部关系管理上可能需要更多关注。"
         )
-        
+
         para2 = (
             f"在领导力方面，决策能力得分为{metrics[1]['values'][0]}%，表现出较强的判断力。"
             f"团队激励能力为{metrics[1]['values'][1]}%，战略思维达到{metrics[1]['values'][2]}%，"
             f"显示出您在管理团队和长远规划方面的优势。"
         )
-        
+
         para3 = (
             f"任务完成可靠性方面，按时完成率为{metrics[2]['values'][0]}%，质量标准得分为{metrics[2]['values'][1]}%，"
             f"问题解决能力为{metrics[2]['values'][2]}%。这些数据表明您是一个可靠的专业人士，"
             f"在您关注的{focus}领域有着坚实的表现基础。"
         )
-        
+
         para4 = (
             f"针对您提到的挑战「{challenge}」，我们建议：\n"
             f"1. 考虑参加领导力发展工作坊，进一步提升管理技能\n"
@@ -101,9 +122,9 @@ def boss_analyze():
             f"4. 定期进行360度反馈评估，了解团队需求\n"
             f"5. 关注行业最新趋势，保持竞争优势"
         )
-        
+
         summary = f"🧠 专业表现分析：<br><br>{para1}<br><br>{para2}<br><br>{para3}<br><br>{para4}"
-        
+
         # Generate email content
         html_body = f"""
         👤 员工姓名：{member_name}<br>
@@ -129,11 +150,10 @@ def boss_analyze():
             "analysis": summary,
             "metrics": metrics
         })
-        
+
     except Exception as e:
         logging.error("❌ 系统错误: %s", str(e))
         return jsonify({"error": "⚠️ 系统内部错误，请稍后再试"}), 500
 
-
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+    app.run(debug=True)
