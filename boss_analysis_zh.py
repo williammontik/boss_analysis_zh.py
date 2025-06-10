@@ -22,7 +22,8 @@ def compute_age(data):
     d, m, y = data.get("dob_day"), data.get("dob_month"), data.get("dob_year")
     try:
         if d and m and y:
-            month = int(m) if m.isdigit() else datetime.strptime(m, "%B").month
+            # This logic correctly handles the month number (e.g., '1', '2') from the updated frontend
+            month = int(m)
             bd = datetime(int(y), month, int(d))
         else:
             bd = parser.parse(data.get("dob", ""), dayfirst=True)
@@ -80,14 +81,12 @@ def boss_analyze():
     <hr><br>
     """
 
-    # Sample metrics, here you can get real data from your application
     metrics = [
         ("沟通效率", 85, 84, 82, "#5E9CA0"),
         ("领导准备度", 88, 88, 56, "#FF9F40"),
         ("任务完成可靠性", 85, 68, 65, "#9966FF")
     ]
 
-    # Generate chart bars dynamically for the metrics
     bar_html = ""
     for title, seg, reg, glo, color in metrics:
         bar_html += f"<strong>{title}</strong><br>"
@@ -98,20 +97,19 @@ def boss_analyze():
             )
         bar_html += "<br>"
 
-    # Example summary text
+    # Create the full summary text for the email
     summary = (
         "<div style='font-size:24px;font-weight:bold;margin-top:30px;'>🧠 总结：</div><br>"
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
         + f"在{country}，具有{experience}年经验的{sector}行业的专业人士，经常在内部期望和市场变化之间找到平衡。沟通效果的表现（{metrics[0][1]}%）对于管理团队和跨部门合作至关重要，尤其在{department}等部门中。</p>"
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
-        + "领导准备度在这个行业越来越被情商和适应力所定义，区域基准为{metrics[1][2]}%。</p>"
+        + f"领导准备度在这个行业越来越被情商和适应力所定义，区域基准为{metrics[1][2]}%。</p>"
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
         + f"可靠完成任务的能力（{metrics[2][1]}%）仍然是晋升潜力的信号。</p>"
         + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
         + f"您的关注领域 — {focus} — 反映了新加坡、马来西亚和台湾的管理者趋势。</p>"
     )
 
-    # Example creative suggestions (replace with dynamic data)
     prompt = f"给出10个区域性、情商高、针对{position}的改善建议，来自{country}，经验{experience}年，聚焦在{focus}。"
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -119,6 +117,7 @@ def boss_analyze():
         temperature=0.85
     )
     tips = response.choices[0].message.content.strip().split("\n")
+    
     tips_html = "<div style='font-size:24px;font-weight:bold;margin-top:30px;'>💡 创意建议：</div><br>"
     for line in tips:
         if line.strip():
@@ -137,19 +136,33 @@ def boss_analyze():
         "</p>"
     )
 
-    # Combine all elements
+    # Combine all elements for the email
     email_output = raw_info + bar_html + summary + tips_html + footer
-    display_output = bar_html + summary + tips_html + footer
-
     send_email(email_output)
+    
+    # === START OF CHANGE ===
+    # Create structured data for the JSON response to the frontend
+    
+    summary_dict = {
+        "text": f"在{country}，具有{experience}年经验的{sector}行业的专业人士，经常在内部期望和市场变化之间找到平衡。沟通效果的表现（{metrics[0][1]}%）对于管理团队和跨部门合作至关重要，尤其在{department}等部门中。",
+        "text2": f"领导准备度在这个行业越来越被情商和适应力所定义。类似职位的基准数据显示，区域平均为{metrics[1][2]}%，显示了大家对清晰、应对压力时的冷静和尊重权威的共同追求。",
+        "text3": f"可靠完成任务的能力（{metrics[2][1]}%）仍然是晋升潜力的一个信号。对于{position}等角色来说，这不仅仅体现了速度，还体现了选择正确的工作执行的洞察力。",
+        "text4": f"您选择的关注领域——{focus}——反映了我们在新加坡、马来西亚和台湾的管理者角色中的一个更广泛的转变。投资于这一领域可能为您的团队带来新的韧性、影响力和可持续增长的路径。"
+    }
 
+    # The tips are already a list, which is what the frontend expects
+    tips_list = [line.strip() for line in tips if line.strip()]
+
+    # Return the structured JSON that the frontend script expects
     return jsonify({
         "metrics": [
             {"title": t, "labels": ["Segment", "Regional", "Global"], "values": [s, r, g]}
             for t, s, r, g, _ in metrics
         ],
-        "analysis": display_output
+        "summary": summary_dict,
+        "suggestions": tips_list
     })
+    # === END OF CHANGE ===
 
 
 if __name__ == "__main__":
