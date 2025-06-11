@@ -59,12 +59,21 @@ def boss_analyze():
     position = data.get("position", "").strip()
     department = data.get("department", "").strip() or '核心职能'
     experience = data.get("experience", "").strip()
-    sector = data.get("sector", "").strip()
+    sector_raw = data.get("sector", "").strip()
     challenge = data.get("challenge", "").strip()
     focus = data.get("focus", "").strip()
     email = data.get("email", "").strip()
     country = data.get("country", "").strip()
     age = compute_age(data)
+
+    # === REPHRASED SECTOR DESCRIPTIONS IN CHINESE ===
+    sector_map = {
+        "内部 – 行政/人事/运营/财务": "关键的行政与运营领域",
+        "内部 – 技术/工程/IT": "创新的技术与工程领域",
+        "外部 – 销售/商务发展/零售": "快节奏的销售与客户关系领域",
+        "外部 – 服务/物流/现场工作": "充满活力的物流与现场服务领域"
+    }
+    sector = sector_map.get(sector_raw, sector_raw) # Use the recrafted text, or the original if not found
 
     raw_info = f"""
     <h3>📥 提交的表单数据：</h3>
@@ -74,7 +83,7 @@ def boss_analyze():
       <li><strong>职位：</strong> {position}</li>
       <li><strong>部门：</strong> {department}</li>
       <li><strong>经验：</strong> {experience} 年</li>
-      <li><strong>行业：</strong> {sector}</li>
+      <li><strong>行业：</strong> {sector_raw}</li>
       <li><strong>挑战：</strong> {challenge}</li>
       <li><strong>关注领域：</strong> {focus}</li>
       <li><strong>电子邮件：</strong> {email}</li>
@@ -108,33 +117,41 @@ def boss_analyze():
             )
         bar_html += "<br>"
 
-    # FIX: Removed stray characters causing a syntax error
+    # === DYNAMIC OPENING SENTENCES IN CHINESE ===
+    opening_templates = [
+        f"在{country}的{sector}中深耕{experience}年，这本身就是对坚韧与专业的最好证明。",
+        f"凭借在{country}要求严苛的{sector}中{experience}年的专注投入，一段非凡的成长与影响力之路已清晰可见。",
+        f"要在{country}的{sector}中航行{experience}年，需要独特的技巧和决心——这些品质在卓越的职业生涯中得到了完美的体现。",
+        f"在{country}快节奏的{sector}中长达{experience}年的职业生涯，充分说明了对卓越和持续适应的非凡承诺。"
+    ]
+    chosen_opening = random.choice(opening_templates)
+    
+    # FINAL "YES" SUMMARY: Observational, rich, and dynamic in Chinese
     summary = (
-        "<div style='font-size:24px;font-weight:bold;margin-top:30px;'>🧠 个人洞察：</div><br>"
-        + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
-        + f"对于一位在<strong>{country}</strong>的<strong>{sector}</strong>领域、拥有<strong>{experience}年</strong>宝贵经验的专业人士而言，其职业旅程是在平衡内部目标与市场脉搏中不断前进的宝贵经历。展现出色的沟通效率（<strong>{metrics[0][1]}%</strong>）是成功的基石，它有助于在团队内部及跨部门之间建立起合作的桥梁。"
+        "<div style='font-size:24px;font-weight:bold;margin-top:30px;'>🧠 对此专业档案的深度洞察：</div><br>"
+        + f"<p style='line-height:1.8; font-size:16px; margin-bottom:18px; text-align:justify;'>"
+        + f"{chosen_opening} 这样的发展路径通常会磨练出卓越的人际沟通能力，高达{metrics[0][1]}%的沟通效率分数就反映了这一点。这不仅是一项后天习得的技能，更是建立强大团队和成功合作的基石，从而能够在复杂的内部目标和市场脉搏之间游刃有余。"
         + "</p>"
-        + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
-        + f"在当今职场，真正的领导力由“心”和适应性来衡量。领导力的准备度分数（区域基准为<strong>{metrics[1][2]}%</strong>）正指向一位已经走在这条正确道路上的专业人士，能够展现出他人所寻求的那份清晰和冷静。这是一种能建立信任并激励行动的宝贵品质。"
+        + f"<p style='line-height:1.8; font-size:16px; margin-bottom:18px; text-align:justify;'>"
+        + f"在当今的商业环境中，真正的领导力更多地由影响力和适应性来衡量。以区域基准{metrics[1][2]}%衡量的领导力准备度，通常表明对此类现代领导力支柱已具备直觉性的掌握。此档案揭示了一位能够在压力时刻为团队提供清晰思路与沉稳风范的专业人士，从而赢得信任，并通过备受尊重的引导激励团队采取行动。"
         + "</p>"
-        + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
-        + f"能够可靠地完成任务（<strong>{metrics[2][1]}%</strong>）这不仅是一个数据，更是巨大潜力的有力证明。对于<strong>{position}</strong>这个角色，这反映出一种智慧：不仅是努力工作，更是专注于真正重要的事情。这样的特质绝不会被忽视。"
+        + f"<p style='line-height:1.8; font-size:16px; margin-bottom:18px; text-align:justify;'>"
+        + f"高达{metrics[2][1]}%的任务完成可靠性，是其巨大影响力与战略智慧的有力证明。对于{position}这样的重要角色，这反映出一种罕见的洞察力——不仅能够高效地完成工作，更能识别出哪些任务真正举足轻重并将其做到极致。这种水平的表现不仅能驱动成果，也预示着其已准备好迎接更大的挑战。"
         + "</p>"
-        + f"<p style='line-height:1.7; font-size:16px; margin-bottom:16px; text-align:justify;'>"
-        + f"选择专注于<strong>{focus}</strong>，意味着正把握着我们在这个区域所看到的关键增长点。培养这项技能是对自身韧性和影响力的重要投资。坚持这个方向，正是在迈向一个充满希望的未来。"
+        + f"<p style='line-height:1.8; font-size:16px; margin-bottom:18px; text-align:justify;'>"
+        + f"将{focus}作为战略重点，是一个极具远见和洞察力的决策。这完美契合了整个区域的战略转型趋势，使这项技能成为未来发展的基石。在此领域的投入，标志着一位拥有清晰且充满希望发展轨迹的专业人士，准备好创造深远持久的价值。"
         + "</p>"
     )
 
-    # === UPDATED PROMPT: Asks for a more professional tone in Chinese ===
     prompt = (
-        f"为一位来自{country}、在{sector}行业有{experience}年经验、担任{position}职位的人，提供10条可行的、专业的、且鼓舞人心的改进建议。"
+        f"为一位来自{country}、在{sector_raw}行业有{experience}年经验、担任{position}职位的人，提供10条可行的、专业的、且鼓舞人心的改进建议。"
         f"他们面临的挑战是“{challenge}”，并希望专注于“{focus}”。"
         f"每条建议都应是一条清晰、有建设性的忠告。语气应当是赋能和尊重的，避免过于随意。请恰当地使用表情符号来增加亲和力，而非显得不专业。"
     )
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.75 # Slightly lowered for more focused output
+        temperature=0.75 
     )
     tips = response.choices[0].message.content.strip().split("\n")
     tips_html = "<div style='font-size:24px;font-weight:bold;margin-top:30px;'>💡 创意建议：</div><br>"
